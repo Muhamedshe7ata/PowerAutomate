@@ -1,0 +1,35 @@
+Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $'''D:\\Patch Management\\Compliance Reports\\Automation\\SMGOthers\\SiteNames.xlsx''' Visible: False ReadOnly: True Instance=> Ins_Xls_Sites
+Excel.ReadFromExcel.ReadAllCells Instance: Ins_Xls_Sites ReadAsText: False FirstLineIsHeader: True RangeValue=> dt_Sites
+Excel.CloseExcel.Close Instance: Ins_Xls_Sites
+Variables.CreateNewList List=> li_SiteFilter
+Variables.CreateNewList List=> li_SiteNameReport
+Variables.RetrieveDataTableColumnIntoList DataTable: dt_Sites ColumnNameOrIndex: 1 ColumnAsList=> li_SiteFilter
+Variables.RetrieveDataTableColumnIntoList DataTable: dt_Sites ColumnNameOrIndex: 0 ColumnAsList=> li_FileName
+Database.Connect ConnectionString: $'''Provider=Microsoft.ACE.OLEDB.12.0;Data Source=D:\\Patch Management\\Compliance Reports\\Automation\\SMGOthers\\SMF2.0-SMG Patch Compliance Report.xlsx;Mode=ReadWrite|Share Deny None;Extended Properties=\"Excel 12.0 Xml;HDR=YES\";Persist Security Info=False''' Connection=> SQLConnection
+SET intCounter TO 0
+LOOP FOREACH li_FilterItem IN li_SiteFilter
+    SET strFilter TO li_FilterItem
+    DISABLE Display.ShowMessageDialog.ShowMessage Message: li_FileName[intCounter] Icon: Display.Icon.None Buttons: Display.Buttons.OK DefaultButton: Display.DefaultButton.Button1 IsTopMost: False ButtonPressed=> ButtonPressed
+    Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $'''D:\\Patch Management\\Compliance Reports\\Automation\\SMGOthers\\SMF2.0-Compliance Report Template.xlsx''' Visible: False ReadOnly: False Instance=> Xls_Ins_Template
+    Excel.SaveExcel.SaveAs Instance: Xls_Ins_Template DocumentFormat: Excel.ExcelFormat.OpenXmlWorkbook DocumentPath: $'''D:\\Patch Management\\Compliance Reports\\Automation\\SMGOthers\\Reports\\SMF2.0 %li_FileName[intCounter]% Patch Compliance Report.xlsx'''
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnection Statement: $'''SELECT * FROM [SMF 15.1-Complete Inventory$] WHERE %strFilter%''' Timeout: 30 Result=> dt_Inventory
+    Excel.SetActiveWorksheet.ActivateWorksheetByName Instance: Xls_Ins_Template Name: $'''SMF 15.1-Complete Inventory'''
+    Excel.WriteToExcel.WriteCell Instance: Xls_Ins_Template Value: dt_Inventory Column: $'''A''' Row: 2
+    Excel.SaveExcel.Save Instance: Xls_Ins_Template
+    Excel.SetActiveWorksheet.ActivateWorksheetByName Instance: Xls_Ins_Template Name: $'''SMF 15.2 - WKS-6W Compliance'''
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnection Statement: $'''SELECT * FROM [SMF 15.2 - WKS-6W Compliance$] WHERE %strFilter%''' Timeout: 30 Result=> dt_wks6w
+    Excel.WriteToExcel.WriteCell Instance: Xls_Ins_Template Value: dt_wks6w Column: $'''A''' Row: 2
+    Excel.SaveExcel.Save Instance: Xls_Ins_Template
+    Excel.SetActiveWorksheet.ActivateWorksheetByName Instance: Xls_Ins_Template Name: $'''SMF 15.3 WKS-10W Compliance'''
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnection Statement: $'''SELECT * FROM [SMF 15.3 WKS-10W Compliance$] WHERE %strFilter%''' Timeout: 30 Result=> dt_wks10w
+    Excel.WriteToExcel.WriteCell Instance: Xls_Ins_Template Value: dt_wks10w Column: $'''A''' Row: 2
+    Excel.SaveExcel.Save Instance: Xls_Ins_Template
+    Excel.SetActiveWorksheet.ActivateWorksheetByName Instance: Xls_Ins_Template Name: $'''SMF 15.4 SRV-10W Compliance'''
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnection Statement: $'''SELECT * FROM [SMF 15.4 SRV-10W Compliance$] WHERE %strFilter%''' Timeout: 30 Result=> dt_srv10w
+    Excel.WriteToExcel.WriteCell Instance: Xls_Ins_Template Value: dt_srv10w Column: $'''A''' Row: 2
+    Excel.SaveExcel.Save Instance: Xls_Ins_Template
+    Excel.SetActiveWorksheet.ActivateWorksheetByName Instance: Xls_Ins_Template Name: $'''Global Summary'''
+    Excel.CloseExcel.CloseAndSave Instance: Xls_Ins_Template
+    Variables.IncreaseVariable Value: intCounter IncrementValue: 1
+END
+Database.Close Connection: SQLConnection
