@@ -1,0 +1,17 @@
+Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $'''D:\\SMP - Platform Management\\Patch Management\\Compliance Tracking\\SMP-IT SPOC.xlsx''' Visible: False ReadOnly: True Instance=> Ins_Xls_ITSPOC
+Excel.ReadFromExcel.ReadAllCells Instance: Ins_Xls_ITSPOC ReadAsText: False FirstLineIsHeader: True RangeValue=> dt_ITSPOC
+Excel.CloseExcel.Close Instance: Ins_Xls_ITSPOC
+Variables.RetrieveDataTableColumnIntoList DataTable: dt_ITSPOC ColumnNameOrIndex: 0 ColumnAsList=> lst_Sites
+Database.Connect ConnectionString: $'''Provider=Microsoft.ACE.OLEDB.12.0;Data Source=D:\\SMP - Platform Management\\Patch Management\\Compliance Tracking\\NCData.xlsx;Mode=ReadWrite|Share Deny None;Extended Properties=\"Excel 12.0 Xml;HDR=YES\";Persist Security Info=False''' Connection=> SQLConnection
+LOOP FOREACH item_SiteName IN dt_ITSPOC
+    DISABLE Display.ShowMessageDialog.ShowMessage Message: item_SiteName[0] Icon: Display.Icon.None Buttons: Display.Buttons.OK DefaultButton: Display.DefaultButton.Button1 IsTopMost: False ButtonPressed=> ButtonPressed
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnection Statement: $'''SELECT * FROM [WKS_NC$] WHERE DeviceName NOT LIKE \'0\' AND ADSite=\'%item_SiteName[0]%\'''' Timeout: 30 Result=> dt_WKS_NC
+    Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $'''D:\\SMP - Platform Management\\Patch Management\\Compliance Tracking\\NCData_Template.xlsx''' Visible: False ReadOnly: True Instance=> Ins_Xls_DataWriter
+    Excel.WriteToExcel.WriteCell Instance: Ins_Xls_DataWriter Value: dt_WKS_NC Column: $'''A''' Row: 2
+    Excel.CloseExcel.CloseAndSaveAs Instance: Ins_Xls_DataWriter DocumentFormat: Excel.ExcelFormat.FromExtension DocumentPath: $'''D:\\SMP - Platform Management\\Patch Management\\Compliance Tracking\\November 2022\\Site Separated Data\\%item_SiteName[0]%-WKS-NonCompliance.xlsx'''
+    Email.SendEmail.Send SMTPServer: $'''172.29.55.33''' Port: 25 EnableSSL: False AcceptUntrustedCertificates: True SendFrom: $'''tushar.singh@motherson.com''' SenderDisplayName: $'''Tushar Singh''' SendTo: item_SiteName[1] CC: $'''%item_SiteName[2]%; ajay.shukla@motherson.com; lovika.bindra@motherson.com; tushar.singh@motherson.com;''' Subject: $'''Non-Compliant Workstations for %item_SiteName[0]%''' Body: $'''This is D-2 day non-compliance notification for %item_SiteName[0]% for which you are responsible to mark the list of systems attached along with this mail as compliant. This is the last notification before we close this month\'s compliance tracking cycle and systems left un-patched will be reported as non-compliant in the SMF report.''' IsBodyHtml: True Attachments: $'''D:\\SMP - Platform Management\\Patch Management\\Compliance Tracking\\November 2022\\Site Separated Data\\%item_SiteName[0]%-WKS-NonCompliance.xlsx'''
+    ON ERROR
+
+    END
+END
+Database.Close Connection: SQLConnection
